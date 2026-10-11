@@ -12,7 +12,13 @@ function getDeltaConfigPath() {
   if (typeof process !== "undefined" && process.env?.DELTA_CONFIG_DIR) {
     return `${process.env.DELTA_CONFIG_DIR}/settings.json`;
   }
-  return typeof process !== "undefined" && process.platform === "win32"
+  const stack = new Error().stack || "";
+  const isWindows =
+    (typeof process !== "undefined" && process.platform === "win32") ||
+    stack.includes("\\") ||
+    stack.includes(":\\");
+
+  return isWindows
     ? "$APPDATA/delta/settings.json"
     : "~/.config/delta/settings.json";
 }
