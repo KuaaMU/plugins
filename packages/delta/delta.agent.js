@@ -8,13 +8,11 @@
 // Subagent profiles belong in: portable.profiles.{worker,scout,reviewer}.model
 // Skills, AGENTS instructions, and MCP belong in: ~/.agents
 
-import fs from "node:fs";
-
 function getDeltaConfigPath() {
-  if (process.env.DELTA_CONFIG_DIR) {
+  if (typeof process !== "undefined" && process.env?.DELTA_CONFIG_DIR) {
     return `${process.env.DELTA_CONFIG_DIR}/settings.json`;
   }
-  return process.platform === "win32"
+  return typeof process !== "undefined" && process.platform === "win32"
     ? "$APPDATA/delta/settings.json"
     : "~/.config/delta/settings.json";
 }
@@ -58,28 +56,6 @@ export function connect({ gateway, model, models }) {
 
   const targetModelId = model?.id || deltaModels[0]?.id || "";
 
-  // Preserve existing custom providers
-  const existingProviders = [];
-  try {
-    const configPath =
-      process.env.DELTA_CONFIG_DIR
-        ? `${process.env.DELTA_CONFIG_DIR}/settings.json`
-        : process.platform === "win32" && process.env.APPDATA
-        ? `${process.env.APPDATA}/delta/settings.json`
-        : null;
-    if (configPath && fs.existsSync(configPath)) {
-      const raw = fs.readFileSync(configPath, "utf-8");
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed?.native?.custom_providers)) {
-        for (const p of parsed.native.custom_providers) {
-          if (p.name !== "Magpie" && p.base_url !== gateway?.v1) {
-            existingProviders.push(p);
-          }
-        }
-      }
-    }
-  } catch {}
-
   const magpieProvider = {
     name: "Magpie",
     base_url: gateway?.v1 || "http://127.0.0.1:3425/v1",
@@ -94,7 +70,7 @@ export function connect({ gateway, model, models }) {
   };
 
   const result = {
-    "native.custom_providers": [magpieProvider, ...existingProviders],
+    "native.custom_providers": [magpieProvider],
     "portable.profiles.worker.model": targetModelId,
     "portable.profiles.scout.model": targetModelId,
     "portable.profiles.reviewer.model": targetModelId,
