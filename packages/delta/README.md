@@ -1,51 +1,68 @@
 # magpie-agent-delta
 
 > Use any AI model in [Delta](https://delta.dev) (by Zed Industries) through [magpie](https://usemagpie.ai).
-> 通过 magpie 在 Delta 编辑器中使用任意大模型。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![magpie-plugin](https://img.shields.io/badge/topic-magpie--plugin-orange.svg)](https://github.com/topics/magpie-plugin)
 
-## 🌟 特性 / Features
+## Features
 
-- 🔄 **全模型支持 (Any Model)**: 在 magpie 的 Agents 界面一键将 Delta 切换至 Claude、GPT、DeepSeek、Gemini 或任何自定义模型及路由组。
-- 🧠 **思考等级无缝透传 (Reasoning Efforts)**: 自动将模型的推理/思考深度（`minimal` / `low` / `medium` / `high`）同步至 Delta 的 `reasoning_effort`。
-- 📏 **精准上下文窗口 (Context Window)**: 动态传递各模型的实际上下文窗口长度（`max_tokens`），避免截断。
-- 🛡️ **无损注入与平滑恢复 (Zero-Risk Stash & Rollback)**: 仅在 Delta 的 `settings.json` 中注入 `magpie` 专属节点，断开时 100% 还原用户原始配置与注释。
-- 📚 **MCP 与技能联动 (Library Support)**: 自动打通 magpie Library 的提示词与 Zed 格式 MCP 服务。
+- **Any Model Routing**: Switch Delta to Claude, GPT, DeepSeek, Gemini, MiniMax, or any custom routing group in one click via Magpie.
+- **Reasoning Effort Passthrough**: Automatically maps model reasoning / thinking effort (`low`, `medium`, `high`, `xhigh`, `max`) into Delta's `reasoning_efforts`.
+- **Accurate Context Windows**: Dynamically passes the model's actual context window (`context_window`) and output token limit (`max_output_tokens`).
+- **Safe Stash & Restoration**: Seamlessly injects `Magpie` into Delta's `native.custom_providers` and preserves existing custom providers. Upon disconnect, Magpie restores original user settings.
+- **Library Ecosystem Synchronization**: Integrates Magpie's Library skills and MCP tools directly into `~/.agents/skills`, `~/.agents/mcp.json`, and `~/.agents/AGENTS.md`.
 
 ---
 
-## 🚀 安装与使用 / Installation & Usage
+## Installation & Usage
 
-### 方式 1：通过 Magpie 插件市场（推荐）/ Via Magpie GUI
-1. 打开 Magpie，进入 **插件 (Plugins)** -> **发现 (Discover)**。
-2. 搜索 **Delta** 或在 **Agent** / **非官方插件** 区域找到 `magpie-agent-delta`。
-3. 点击 **安装 (Install)**。
-4. 返回 **Agent** 页面，在 Delta 行即可直接选择任意大模型！
+### Method 1: Via Magpie Discover (Recommended)
+1. Open Magpie and go to **Plugins** -> **Discover**.
+2. Search for **Delta** or locate `magpie-agent-delta`.
+3. Click **Install**.
+4. Return to the **Agent** page and choose any model on the Delta row!
 
-### 方式 2：CLI 本地挂载测试 / Via CLI
+### Method 2: Via CLI
 ```bash
-# 本地目录挂载测试
+# Local development mount
 magpie plugin add F:/magpie-agent-delta
 
-# 或从 npm 安装（发布后）
+# Or install from npm (once published)
 magpie plugin add @magpie-community/agent-delta
 ```
 
 ---
 
-## ⚙️ 工作机制 / How It Works
+## How It Works
 
-本插件基于 Magpie 最新发布的 **Agent Plugin 规范** 实现，针对 Delta 进行了原生级内核适配：
-1. **自动识别**：检测系统中的 Delta 可执行文件及配置目录（Windows: `%APPDATA%\delta`；macOS/Linux: `~/.config/delta`）。
-2. **原生 Custom Provider 注入**：严格遵循 Delta 独立的 `StoredSettings` Schema，在 `native.custom_providers` 节点注册 `Magpie` OpenAI 兼容网关，并通过动态模型发现接口（`/v1/models`）自动挂载可用模型目录。
-3. **多智能体角色绑定**：将选定模型同步到 `portable.profiles`（`worker`、`scout`、`reviewer`），确保 Delta 子代理和多模态工作流无缝调用。
-4. **Library 生态互通**：将 Magpie 的 Library（MCP、Skills、AGENTS 规范）直接对齐到 Delta 原生识别的 `~/.agents/skills`、`~/.agents/mcp.json` 与 `~/.agents/AGENTS.md`，实现一键通用。
-5. **断开还原**：在 Magpie 中关闭 Delta 开关时，由 Magpie 自动清理注入配置并完整恢复用户的原有设置。
+This agent integration is built against Magpie's Agent Plugin Specification and targets Delta's native engine:
+1. **Config Discovery**: Discovers Delta's configuration path (`%APPDATA%\delta\settings.json` on Windows, `~/.config/delta/settings.json` on macOS/Linux, or `$DELTA_CONFIG_DIR`).
+2. **Native Custom Provider Injection**: Injects the `Magpie` OpenAI-compatible gateway into `native.custom_providers` adhering to Delta's `StoredSettings` schema.
+3. **Multi-Agent Profile Binding**: Synchronizes the selected model across Delta profiles (`worker`, `scout`, `reviewer`) under `portable.profiles`.
+4. **Library Bridging**: Symlinks/copies Library assets into `~/.agents/skills` and `~/.agents/mcp.json`.
+5. **Clean Unwire**: Automatically restores original custom providers and profiles on disconnect.
 
 ---
 
-## 📄 License
+## 中文说明
+
+### 🌟 特性
+
+- 🔄 **全模型支持**: 在 Magpie 的 Agents 界面一键将 Delta 切换至任意大模型或自定义路由组。
+- 🧠 **思考等级透传**: 自动将模型推理思考深度同步至 Delta 的 `reasoning_efforts`。
+- 📏 **精准上下文窗口**: 动态传递各模型的实际上下文窗口长度与最大输出 Token。
+- 🛡️ **无损注入与平滑恢复**: 在 `native.custom_providers` 注入 Magpie 网关并保留用户已有自定义 Provider，断开时 100% 恢复。
+- 📚 **Library 生态互通**: 自动对齐 Magpie 的 Library（Skills、MCP）到 Delta 识别的 `~/.agents/skills` 与 `~/.agents/mcp.json`。
+
+### ⚙️ 使用说明
+
+1. 在 Magpie 插件市场安装 Delta 插件后，在 Agents 列表点击连接。
+2. 若 Delta 正在运行，请重启 Delta 使新注入的 Custom Provider 生效。
+3. 在 Delta 模型选择器中选择 Magpie 路由的模型即可开始对话。
+
+---
+
+## License
 
 MIT © [KuaaMU](https://github.com/KuaaMU)

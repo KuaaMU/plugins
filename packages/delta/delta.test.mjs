@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { agent, connect } from "./delta.agent.js";
 
 test("delta agent definition metadata", () => {
@@ -8,6 +9,7 @@ test("delta agent definition metadata", () => {
   assert.equal(agent.format, "json");
   assert.equal(agent.model, "portable.profiles.worker.model");
   assert.deepEqual(agent.ua, ["delta", "zed"]);
+  assert.ok(agent.config.includes("settings.json"));
 });
 
 test("delta agent library configuration bridges ~/.agents", () => {
@@ -17,38 +19,43 @@ test("delta agent library configuration bridges ~/.agents", () => {
   assert.equal(agent.library.mcpFormat, "zed");
 });
 
-test("delta connect returns valid Delta schema without unknown root keys", () => {
+test("delta connect returns valid Delta schema and captures gateway key for wire probe", () => {
   const result = connect({
-    gateway: { url: "http://127.0.0.1:3425", v1: "http://127.0.0.1:3425/v1", key: "test-key" },
-    model: { id: "group/auto-minimax-m3-1-flash-preview", name: "MiniMax M3.1 Flash" },
+    gateway: { url: "http://127.0.0.1:3425", v1: "http://127.0.0.1:3425/v1", key: "test-gateway-key" },
+    model: { id: "test-model-1", name: "Test Model 1" },
     models: [
-      { id: "group/auto-minimax-m3-1-flash-preview", name: "MiniMax M3.1 Flash", context: 1000000, output: 128000, efforts: ["low", "high"] },
-      { id: "group/space-bunny", name: "Space Bunny", context: 1000000, output: 32768, efforts: [] }
+      { id: "test-model-1", name: "Test Model 1", context: 1000000, output: 128000, efforts: ["low", "high"] },
+      { id: "test-model-2", name: "Test Model 2", context: 500000, output: 32768, efforts: [] }
     ]
   });
 
   // Verify custom provider structure
   assert.ok(result["native.custom_providers"], "native.custom_providers should be defined");
   const providers = result["native.custom_providers"];
-  assert.equal(providers.length, 1);
-  assert.equal(providers[0].name, "Magpie");
-  assert.equal(providers[0].base_url, "http://127.0.0.1:3425/v1");
-  assert.equal(providers[0].api_mode, "open_ai_chat_completions");
-  assert.equal(providers[0].headers[0].name, "Authorization");
-  assert.equal(providers[0].headers[0].value, "Bearer test-key");
-  assert.equal(providers[0].models.length, 2);
-  assert.equal(providers[0].models[0].id, "group/auto-minimax-m3-1-flash-preview");
-  assert.deepEqual(providers[0].models[0].reasoning_efforts, ["low", "high"]);
+  assert.ok(providers.length >= 1);
+  const magpie = providers.find((p) => p.name === "Magpie");
+  assert.ok(magpie);
+  assert.equal(magpie.base_url, "http://127.0.0.1:3425/v1");
+  assert.equal(magpie.api_mode, "open_ai_chat_completions");
+  assert.equal(magpie.headers[0].name, "Authorization");
+  assert.equal(magpie.headers[0].value, "Bearer test-gateway-key");
+  assert.equal(magpie.models.length, 2);
+  assert.equal(magpie.models[0].id, "test-model-1");
+  assert.deepEqual(magpie.models[0].reasoning_efforts, ["low", "high"]);
 
-  // Verify subagent profiles
-  assert.equal(result["portable.profiles.scout.model"], "group/auto-minimax-m3-1-flash-preview");
-  assert.equal(result["portable.profiles.reviewer.model"], "group/auto-minimax-m3-1-flash-preview");
+  // Verify worker, scout, and reviewer profiles
+  assert.equal(result["portable.profiles.worker.model"], "test-model-1");
+  assert.equal(result["portable.profiles.scout.model"], "test-model-1");
+  assert.equal(result["portable.profiles.reviewer.model"], "test-model-1");
 
-  // Verify no legacy Zed keys that violate Delta's StoredSettings schema
+  // Verify wire probe captures gateway key in native.env
+  assert.equal(result["native.env.MAGPIE_GATEWAY_KEY"], "test-gateway-key");
+
+  // Verify no unknown root keys
   for (const key of Object.keys(result)) {
     assert.ok(
       key.startsWith("portable.") || key.startsWith("native.") || key === "version",
-      `Key ${key} must not be placed at root to avoid Serde deny_unknown_fields error`
+      `Key ${key} must adhere to StoredSettings hierarchy`
     );
   }
 });
