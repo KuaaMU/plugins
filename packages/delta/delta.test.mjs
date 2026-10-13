@@ -21,18 +21,23 @@ test("delta agent library configuration bridges ~/.agents", () => {
 test("delta config path detects Windows and POSIX via stack traces", () => {
   // Windows backslash stack trace
   const winStack = "Error\n    at packages\\delta\\delta.agent.js:15:17";
-  assert.equal(getDeltaConfigPath(winStack), "$APPDATA/delta/settings.json");
+  assert.equal(getDeltaConfigPath(winStack), "~/AppData/Roaming/delta/settings.json");
 
-  // Windows drive letter stack trace
+  // Windows drive letter with backslash
   const winDriveStack = "Error\n    at C:\\magpie\\packages\\delta\\delta.agent.js:15:17";
-  assert.equal(getDeltaConfigPath(winDriveStack), "$APPDATA/delta/settings.json");
+  assert.equal(getDeltaConfigPath(winDriveStack), "~/AppData/Roaming/delta/settings.json");
+
+  // Windows drive letter with forward slash (as normalized by Go/MoeJS)
+  const winForwardDriveStack = "Error\n    at C:/magpie/packages/delta/delta.agent.js:15:17";
+  assert.equal(getDeltaConfigPath(winForwardDriveStack), "~/AppData/Roaming/delta/settings.json");
 
   // macOS / Linux POSIX stack trace (without backslash or drive letter)
   const posixStack = "Error\n    at /home/runner/work/magpie/packages/delta/delta.agent.js:15:17";
-  // On Windows runner, process.platform is win32 so process check takes precedence;
-  // pass a stack when running in standard MoeJS (where process is undefined).
-  // Test stack inspection directly:
-  const stackHasWindows = posixStack.includes("\\") || posixStack.includes(":\\");
+  const stackHasWindows =
+    posixStack.includes("\\") ||
+    posixStack.includes(":\\") ||
+    posixStack.includes(":/") ||
+    /^[a-zA-Z]:/.test(posixStack);
   assert.equal(stackHasWindows, false);
 });
 

@@ -24,10 +24,12 @@ export function getDeltaConfigPath(stackOverride) {
   const isWindows =
     (typeof process !== "undefined" && process.platform === "win32") ||
     stack.includes("\\") ||
-    stack.includes(":\\");
+    stack.includes(":\\") ||
+    stack.includes(":/") ||
+    /^[a-zA-Z]:/.test(stack);
 
   return isWindows
-    ? "$APPDATA/delta/settings.json"
+    ? "~/AppData/Roaming/delta/settings.json"
     : "~/.config/delta/settings.json";
 }
 
